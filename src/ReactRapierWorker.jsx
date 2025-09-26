@@ -147,10 +147,7 @@ function RapierWorker() {
       });
     }
   }, []);
-  return (
-    <>
-    </>
-  );
+  return null;
 }
 
 export default RapierWorker
