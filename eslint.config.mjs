@@ -4,11 +4,13 @@ import pluginJs from "@eslint/js";
 
 export default [
   {
+    files: ["**/*.{js,jsx}"],
     languageOptions: {
       globals: globals.browser, // ブラウザ環境のグローバル変数を有効にする
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
+	ecmaFeatures: { jsx: true },
       },
     },
   },

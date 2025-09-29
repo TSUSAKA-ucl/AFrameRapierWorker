@@ -10,42 +10,42 @@ export let globalDestinationsRef = null;
 export let globalFrameCounter = null;
 
 // *****************
-// functions to define A-Frame objects from the Rapier object definitions
+// function(s) to define A-Frame objects from the Rapier object definitions
 // they are called when the Rapier worker sends the object definitions
 // :
-function cuboidAttrs(objDef) {
-  const attrs = {};
-  if (objDef.size) {
-    console.log("Cuboid ", objDef.id, " size:", objDef.size);
-    attrs.width = objDef.size.x;
-    attrs.height = objDef.size.y;
-    attrs.depth = objDef.size.z;
-  } else {
-    console.warn("Cuboid size not defined, using 1x1x1. Obj:", objDef);
-    attrs.width = 1;
-    attrs.height = 1;
-    attrs.depth = 1;
-  }
-  attrs.color = objDef.color || 'gray';
-  return attrs;
-}
-
 function defineObject(objDef) {
   const sceneEl = document.querySelector('a-scene');
   if (!sceneEl) return null;
   let el = null;
+  const elAttrs = {};
+  console.log("Defining object:", objDef.id, "shape:", objDef.shape);
   switch (objDef.shape) {
-  case 'cuboid': {
+  case 'box': {
     el = document.createElement('a-box');
-    el.setAttribute('id', objDef.id);
-    const elAttrs = cuboidAttrs(objDef);
-    Object.entries(elAttrs).forEach(([k,v])=>el.setAttribute(k,v));
-    break;
+    elAttrs.width = objDef.size.x;
+    elAttrs.height = objDef.size.y;
+    elAttrs.depth = objDef.size.z;
   }
+    break;
+  case 'cylinder': {
+    // console.log("Creating cylinder with size: ", objDef.size);
+    el = document.createElement('a-cylinder');
+    elAttrs.height = objDef.size.height;
+    elAttrs.radius = objDef.size.radius;
+  }
+    break;
+  case 'sphere': {
+    el = document.createElement('a-sphere');
+    elAttrs.radius = objDef.size.radius;
+  }
+    break;
   default:
     console.warn("Unknown shape:", objDef.shape);
   }
   if (!el) return null;
+  elAttrs.color = objDef.color || 'gray';
+  el.setAttribute('id', objDef.id);
+  Object.entries(elAttrs).forEach(([k,v])=>el.setAttribute(k,v));
   if (objDef.pose) {
     el.object3D.position.set(objDef.pose[0], objDef.pose[1], objDef.pose[2]);
     el.object3D.quaternion.set(objDef.pose[4], objDef.pose[5], objDef.pose[6],

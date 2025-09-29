@@ -29,14 +29,12 @@ async function run_simulation() {
   // self.postMessage(groundPlaneMsg);
   
   userConfig.rigidBodies
-    .filter(obj=>{return obj?.collider?.shape === 'box';})
+    .filter(obj=>{return obj?.collider?.shape})
     .forEach(obj=>{
-      boxCreateAndPost(obj.name, world,
-		       obj.position, obj.orientation,
-		       obj.collider.size,
-		       obj.collider.color,
-		       obj?.collider.props,
-		       obj?.type);
+      primitiveCreateAndPost(obj.name, world,
+			     obj.position, obj.orientation,
+			     obj.collider,
+			     obj?.type);
     });
   userConfig.joints
     .filter(jnt=>{return jnt?.type === 'prismatic';})
@@ -195,7 +193,7 @@ async function run_simulation() {
     }
   }
       
-  console.log('rigidBodies in the worker:', storedBodies);
+  // console.log('rigidBodies in the worker:', storedBodies);
   // ****************
   // Game loop. Replace by your own game loop system.
   let firstStep = true;
@@ -261,7 +259,64 @@ async function run_simulation() {
 }
 
 
+// ********************************
+// rapier colliderDesc creation
+function createColliderDesc(colliderDef) {
+  const size = colliderDef.size;
+  switch (colliderDef?.shape) {
+  case 'cuboid':
+    colliderDef.shape = 'box';
+  case 'box':
+    return RAPIER.ColliderDesc.cuboid(size.x, size.y, size.z);
+  case 'cylinder':
+    return RAPIER.ColliderDesc.cylinder(size.halfHeight, size.radius);
+  case 'ball':
+    colliderDef.shape = 'sphere';
+  case 'sphere':
+    return RAPIER.ColliderDesc.ball(size.radius);
+  case 'capsul':
+    return RAPIER.ColliderDesc.capsule(size.halfHeight, size.radius);
+  default:
+    return null;
+  }
+}
 
+// ********************************
+// write collider size to aframe msg
+function writeColliderSizeToMessage(collider, // rapier collider
+				    aframeMsg) {
+  if (!collider) return;
+  let sizeOk = true;
+  const shape = collider.shape;
+  switch (shape?.type) {
+  case RAPIER.ShapeType.Cuboid:
+    aframeMsg.size = {x: shape.halfExtents.x * 2,
+		      y: shape.halfExtents.y * 2,
+		      z: shape.halfExtents.z * 2
+		     };
+    break;
+  case RAPIER.ShapeType.Cylinder:
+  case RAPIER.ShapeType.Capsule:
+    aframeMsg.size = {height: shape.halfHeight * 2,
+		      radius: shape.radius
+		     };
+    break;
+  case RAPIER.ShapeType.Ball:
+    aframeMsg.size = {radius: shape.radius
+		     };
+    break;
+  default:
+    sizeOk = false;
+    break;
+  }
+  if (!sizeOk) {
+    console.warn("Unknown collider shape: ", shape);
+    console.warn("msg without size:", aframeMsg);
+  }
+}
+
+// ********************************
+// write position&orientation of RB to aframe msg
 function writePoseToMessage(body, message) {
   if (!body) return;
   const position = body.translation();
@@ -270,40 +325,8 @@ function writePoseToMessage(body, message) {
 		  orientation.w, orientation.x, orientation.y, orientation.z
 		 ];
 }
-function writeCuboidSizeToMessage(collider, message) {
-  if (!collider) return;
-  const shape = collider.shape;
-  if (shape && shape.type === RAPIER.ShapeType.Cuboid) {
-    message.size = {x: shape.halfExtents.x * 2,
-		    y: shape.halfExtents.y * 2,
-		    z: shape.halfExtents.z * 2
-		   };
-    // console.log("msg with Cuboid size:", message);
-  } else {
-    console.warn("Collider shape is not Cuboid:", shape);
-    console.warn("msg without size:", message);
-  }
-}
 
-function boxCreateAndPost(id,
-			  world, position, rotation, size, color,
-			  colliderProps = {},
-			  dynamicsType = 'dynamic',
-			  share = true, bodyList = storedBodies,
-			  coliderList = storedColliders,
-			 ) {
-  if (!dynamicsType) dynamicsType = 'dynamic';
-  const {box, boxCollider, boxmsg}
-	= createBox(world, position, rotation, size, color,
-		    id, dynamicsType, colliderProps);
-  self.postMessage(boxmsg);
-  if (share) {
-    bodyList[id] = box;
-    coliderList[id] = boxCollider;
-  }
-  return box;
-}
-
+// ********************************
 function setColliderProperties(collider, props)
 {
   if (props?.density) {
@@ -333,8 +356,9 @@ function setColliderProperties(collider, props)
   }
 }
 
-function createBox(world, position, rotation, size, color, id,
-		   dynamicsType, colliderProps) {
+// ********************************
+function createPrimitive(world, position, rotation, colliderDef,
+			 id, dynamicsType = 'dynamic') {
   // Create a dynamic rigid-body.
   if (!position) {
     position = {x: 0.0, y: 0.0, z: 0.0};
@@ -342,40 +366,64 @@ function createBox(world, position, rotation, size, color, id,
   if (!rotation) {
     rotation = {w: 1.0, x: 0.0, y: 0.0, z: 0.0};
   }
-  let boxDesc;
+  let rbDesc;
   switch (dynamicsType) {
   case 'dynamic':
-    boxDesc = RAPIER.RigidBodyDesc.dynamic()
+    rbDesc = RAPIER.RigidBodyDesc.dynamic()
     break;
   case 'kinematicPosition':
-    boxDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
+    rbDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
     break;
   case 'kinematicVelocity':
-    boxDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased()
+    rbDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased()
     break;
   case 'fixed':
-    boxDesc = RAPIER.RigidBodyDesc.fixed()
+    rbDesc = RAPIER.RigidBodyDesc.fixed()
     break;
   default:
     console.warn("Unknown dynamics type:", dynamicsType,
 		 "using dynamic.");
-    boxDesc = RAPIER.RigidBodyDesc.dynamic()
+    rbDesc = RAPIER.RigidBodyDesc.dynamic()
   }
-  boxDesc
+  rbDesc
     .setTranslation(position.x, position.y, position.z)
     .setRotation(rotation);
-  let box = world.createRigidBody(boxDesc);
+  let rigidBody = world.createRigidBody(rbDesc);
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let boxColliderDesc = RAPIER.ColliderDesc.cuboid(size.x, size.y, size.z);
-  setColliderProperties(boxColliderDesc, colliderProps);
-  let boxCollider = world.createCollider(boxColliderDesc, box);
-  const boxmsg = {type: 'definition', id: id, shape: 'cuboid',
-		   color: color };
-  writeCuboidSizeToMessage(boxCollider, boxmsg);
-  writePoseToMessage(box, boxmsg);
-  return {box, boxCollider, boxmsg};
+  // let boxColliderDesc = RAPIER.ColliderDesc.cuboid(size.x, size.y, size.z);
+  const colliderDesc = createColliderDesc(colliderDef);
+  setColliderProperties(colliderDesc, colliderDef?.props);
+  let rapierCollider = world.createCollider(colliderDesc, rigidBody);
+  const aframeMsg = {type: 'definition', id: id, shape: colliderDef.shape,
+			color: colliderDef?.color };
+  // writeCuboidSizeToMessage(rapierCollider, aframeMsg);
+  writeColliderSizeToMessage(rapierCollider, aframeMsg);
+  writePoseToMessage(rigidBody, aframeMsg);
+  return {rigidBody, rapierCollider, aframeMsg};
 }
 
+// ********************************
+function primitiveCreateAndPost(id,
+				world, position, rotation,
+				colliderDef,
+				dynamicsType = 'dynamic',
+				share = true, bodyList = storedBodies,
+				colliderList = storedColliders,
+			       ) {
+  if (!dynamicsType) dynamicsType = 'dynamic';
+  const {rigidBody: rapierRb, rapierCollider, aframeMsg}
+	= createPrimitive(world, position, rotation, colliderDef,
+			  id,
+			  dynamicsType);
+  self.postMessage(aframeMsg);
+  if (share) {
+    bodyList[id] = rapierRb;
+    colliderList[id] = rapierCollider;
+  }
+  return rapierRb;
+}
+
+// ********************************
 function setNextPose(body, position, rotation) {
   if (!body.isKinematic()) {
     console.warn("setNextPose: body is not kinematic:", body);
