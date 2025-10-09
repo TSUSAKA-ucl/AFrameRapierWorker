@@ -37,50 +37,54 @@ async function run_simulation() {
 			     obj?.type);
     });
   userConfig.joints
-    .filter(jnt=>{return jnt?.type === 'prismatic';})
     ?.forEach(jnt=>{
-      const jntParams = RAPIER.JointData.prismatic(jnt.anchorA,
-						   jnt.anchorB,
-						   jnt.axis);
-      if (jnt?.limits) {
-	jntParams.limitsEnabled = true;
-	jntParams.limits = jnt.limits;
-      } else {
-	jntParams.limitsEnabled = false;
+      console.log("# Creating joint:", jnt);
+      let jntParams = null;
+      if (jnt?.type === 'prismatic') {
+	jntParams = RAPIER.JointData.prismatic(jnt.anchorA,
+					       jnt.anchorB,
+					       jnt.axis);
+      } else if (jnt?.type === 'revolute') {
+	jntParams = RAPIER.JointData.revolute(jnt.anchorA,
+					      jnt.anchorB,
+					      jnt.axis);
       }
-      const jj1 = world.createImpulseJoint(jntParams,
-					   getRigidBody(jnt.bodyA),
-					   getRigidBody(jnt.bodyB),
-					   true);
-      if (jnt?.motor) {
-	const m = jnt.motor;
-	if (m?.type === 'position') {
-	  jj1.configureMotorPosition(m.targetPos, m.stiffness, m.damping);
-	} else if (m?.type === 'velocity') {
-	  jj1.configureMotorVelocity(m.targetVel, m.factor);
+      if (jntParams) {
+	if (jnt?.limits) {
+	  jntParams.limitsEnabled = true;
+	  jntParams.limits = jnt.limits;
+	} else {
+	  jntParams.limitsEnabled = false;
 	}
-      }
-      storedJoints[jnt.name] = jj1;
-    });
-  userConfig.joints
-    .filter(jnt=>{return jnt?.type === 'revolute';})
-    ?.forEach(jnt=>{
-      const jntParams = RAPIER.JointData.revolute(jnt.anchorA,
-						  jnt.anchorB,
-						  jnt.axis);
-      if (jnt?.limits) {
-	jntParams.limitsEnabled = true;
-	jntParams.limits = jnt.limits;
-      } else {
-	jntParams.limitsEnabled = false;
-      }
-      const jj1 = world.createImpulseJoint(jntParams,
+
+	let jj1 = null;
+	if (jnt?.modeling === 'reduction') {
+	  jj1 = world.createMultibodyJoint(jntParams,
 					   getRigidBody(jnt.bodyA),
 					   getRigidBody(jnt.bodyB),
 					   true);
-      storedJoints[jnt.name] = jj1;
+	} else {
+	  jj1 = world.createImpulseJoint(jntParams,
+					     getRigidBody(jnt.bodyA),
+					     getRigidBody(jnt.bodyB),
+					 true);
+	}
+	if (jnt?.motor) {
+	  const m = jnt.motor;
+	  if (m?.type === 'position') {
+	    console.log("### Configuring position motor:", m);
+	    jj1.configureMotorPosition(m.targetPos, m.stiffness, m.damping);
+	    console.log("### Motor configured.");
+	  } else if (m?.type === 'velocity') {
+	    console.log("### Configuring velocity motor:", m);
+	    jj1.configureMotorVelocity(m.targetVel, m.damping);
+	    console.log("### Motor configured.");
+	  }
+	}
+	storedJoints[jnt.name] = jj1;
+      }
     });
-
+  // ****************
   function uniqueObjectName(base) {
     let name = base;
     let i = 1;
