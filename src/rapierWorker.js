@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat'
+import {isoMultiply, isoInvert} from './isometry3.js';
 import {getRigidBody, storedBodies,
 	storedJoints, storedFunctions, FunctionState,
 	setStepTime} from './rapierObjectUtils.js'
@@ -18,6 +19,7 @@ async function run_simulation() {
   // Use the RAPIER module here.
   let gravity = { x: 0.0, y: -9.81, z: 0.0 };
   let world = new RAPIER.World(gravity);
+  self.world = world;
 
   // // Create the ground
   // let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.5, 0.1, 10.5);
@@ -167,6 +169,7 @@ async function run_simulation() {
       }
       break;
     case 'call': 
+      console.log('*** rapierWorker dispatchs func. data:',data, 'arg:',data.args);
       setFuncStateAndArgs(data.name, FunctionState.SINGLE_SHOT, data.args);
       break;
     case 'activate':
@@ -174,6 +177,12 @@ async function run_simulation() {
       break;
     case 'deactivate':
       setFuncStateAndArgs(data.name, FunctionState.STOPPED, data.args);
+      break;
+    case 'fix':
+      fix(data.name, data.bodyA, data.bodyB);
+      break;
+    case 'release':
+      release(data.name);
       break;
     default:
       console.warn("Worker: Unknown message", data);
@@ -435,4 +444,37 @@ function setNextPose(body, position, rotation) {
   }
   body.setNextKinematicTranslation(position);
   body.setNextKinematicRotation(rotation);
+}
+// ********************************
+function fix(fixName, body1name, body2name) {
+  const body1 = storedBodies[body1name];
+  const body2 = storedBodies[body2name];
+  if (self?.world &&
+      body1 && body2 && !storedJoints[fixName]) {
+    const pose1 = [body1.translation(), body1.rotation()];
+    const pose2 = [body2.translation(), body2.rotation()];
+    const pose2in1 = isoMultiply(isoInvert(pose1), pose2);
+    const params = RAPIER.JointData.fixed(pose2in1[0], pose2in1[1],
+					  {x:0, y:0, z:0},
+					  {w:1, x:0, y:0, z:0});
+    const joint = self.world.createImpulseJoint(params, body1, body2, true);
+    storedJoints[fixName] = joint;
+    return joint;
+  } else {
+    console.warn("fix: body not found:", body1name, body2name,
+		 "or joint already exists:", fixName);
+    console.warm('bodyA:', body1, 'bodyB:',body2,
+		 'fixJnt(must be undefined):', storedJoints[fixName],
+		 'world:', self?.world);
+    return null;
+  }
+}
+function release(fixName) {
+  const joint = storedJoints[fixName];
+  if (self?.world && joint) {
+    const jnt = self.world.removeImpulseJoint(joint, true);
+    delete storedJoints[fixName];
+  } else {
+    console.warn("release: joint not found:", fixName);
+  }
 }

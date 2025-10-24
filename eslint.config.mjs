@@ -18,6 +18,7 @@ export default [
   {
     rules: {
       'no-unused-vars': 'warn',
+      'no-fallthrough': 'warn',  // ← break がない case を警告に
     }
   },
 ];
