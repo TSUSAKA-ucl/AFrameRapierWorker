@@ -342,6 +342,12 @@ function writePoseToMessage(body, message) {
 // ********************************
 function setColliderProperties(collider, props)
 {
+  if (props?.translation) {
+    collider.setTranslation(...props.translation);
+  }
+  if (props?.rotation) {
+    collider.setRotation(props.translation);
+  }
   if (props?.density) {
     collider.setDensity(props.density);
   }
@@ -404,15 +410,35 @@ function createPrimitive(world, position, rotation, colliderDef,
   let rigidBody = world.createRigidBody(rbDesc);
   // Create a cuboid collider attached to the dynamic rigidBody.
   // let boxColliderDesc = RAPIER.ColliderDesc.cuboid(size.x, size.y, size.z);
-  const colliderDesc = createColliderDesc(colliderDef);
-  setColliderProperties(colliderDesc, colliderDef?.props);
-  let rapierCollider = world.createCollider(colliderDesc, rigidBody);
-  const aframeMsg = {type: 'definition', id: id, shape: colliderDef.shape,
-			color: colliderDef?.color };
+  
+  const oneCollider = (def)=>{
+    const colliderDesc = createColliderDesc(def);
+    setColliderProperties(colliderDesc, def?.props);
+    const rapierCollider = world.createCollider(colliderDesc, rigidBody);
+    // message for AFrame generation
+    const trans = def?.props?.translation ? def.props.translation // [x,y,z]
+	  : [0,0,0];
+    const rot = def?.props?.rotation ? def?.props?.rotation // {w:R, x:i, y:j, z:k}
+	  : {w:1, x:0, y:0, z:0};
+    const oneMsg = {shape: def.shape,
+		    translation: trans, rotation: rot,
+		    color: def?.color, opacity: def?.opacity };
+    writeColliderSizeToMessage(rapierCollider, oneMsg);
+    return {rapier: rapierCollider, aframe: oneMsg};
+  };
+  // colliderDef
+  const rapierColliders = [];
+  const colliderMsgs = [];
+  const defArray = Array.isArray(colliderDef) ? colliderDef : [colliderDef];
+  defArray.forEach((collider, idx)=> {
+    const col = oneCollider(collider);
+    rapierColliders[idx] = col.rapier;
+    colliderMsgs[idx] = col.aframe;
+  });
+  const aframeMsg = {type: 'definition', id: id, colliders: colliderMsgs };
   // writeCuboidSizeToMessage(rapierCollider, aframeMsg);
-  writeColliderSizeToMessage(rapierCollider, aframeMsg);
   writePoseToMessage(rigidBody, aframeMsg);
-  return {rigidBody, rapierCollider, aframeMsg};
+  return {rigidBody, rapierColliders, aframeMsg};
 }
 
 // ********************************

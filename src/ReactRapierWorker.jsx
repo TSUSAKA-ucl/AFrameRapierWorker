@@ -16,36 +16,50 @@ export let globalFrameCounter = null;
 function defineObject(objDef) {
   const sceneEl = document.querySelector('a-scene');
   if (!sceneEl) return null;
-  let el = null;
-  const elAttrs = {};
-  console.log("Defining object:", objDef.id, "shape:", objDef.shape);
-  switch (objDef.shape) {
-  case 'box': {
-    el = document.createElement('a-box');
-    elAttrs.width = objDef.size.x;
-    elAttrs.height = objDef.size.y;
-    elAttrs.depth = objDef.size.z;
-  }
-    break;
-  case 'cylinder': {
-    // console.log("Creating cylinder with size: ", objDef.size);
-    el = document.createElement('a-cylinder');
-    elAttrs.height = objDef.size.height;
-    elAttrs.radius = objDef.size.radius;
-  }
-    break;
-  case 'sphere': {
-    el = document.createElement('a-sphere');
-    elAttrs.radius = objDef.size.radius;
-  }
-    break;
-  default:
-    console.warn("Unknown shape:", objDef.shape);
-  }
-  if (!el) return null;
-  elAttrs.color = objDef.color || 'gray';
+  // let el = null;
+  console.log("Defining object:", objDef.id);
+  const el = document.createElement('a-entity');
+  objDef.colliders.forEach((col)=>{
+    const elAttrs = {};
+    let colEl = null;
+    switch (col.shape) {
+    case 'box': {
+      colEl = document.createElement('a-box');
+      elAttrs.width = col.size.x;
+      elAttrs.height = col.size.y;
+      elAttrs.depth = col.size.z;
+    }
+      break;
+    case 'cylinder': {
+      // console.log("Creating cylinder with size: ", col.size);
+      colEl = document.createElement('a-cylinder');
+      elAttrs.height = col.size.height;
+      elAttrs.radius = col.size.radius;
+    }
+      break;
+    case 'sphere': {
+      colEl = document.createElement('a-sphere');
+      elAttrs.radius = col.size.radius;
+    }
+      break;
+    default:
+      console.warn("Unknown shape:", col.shape);
+    }
+    if (!colEl) return null;
+    elAttrs.color = col.color || 'gray';
+    Object.entries(elAttrs).forEach(([k,v])=>colEl.setAttribute(k,v));
+    if (col?.opacity) {
+      colEl.setAttribute('material', 'opacity', col.opacity);
+      colEl.setAttribute('material', 'transparent', true);
+    }
+    colEl.object3D.position.set(...colEl.translation);
+    colEl.object3D.quaternion.set(colEl.rotation.x,
+                                  colEl.rotation.y,
+                                  colEl.rotation.z,
+                                  colEl.rotation.w);
+    el.appendChild(colEl);
+  });
   el.setAttribute('id', objDef.id);
-  Object.entries(elAttrs).forEach(([k,v])=>el.setAttribute(k,v));
   if (objDef.pose) {
     el.object3D.position.set(objDef.pose[0], objDef.pose[1], objDef.pose[2]);
     el.object3D.quaternion.set(objDef.pose[4], objDef.pose[5], objDef.pose[6],
