@@ -11,6 +11,7 @@ async function loadUserConfig(path) {
   return module.default;
 }
 
+console.log('#### rapier worker version:',__APP_VERSION__);
 run_simulation();
 async function run_simulation() {
   await RAPIER.init();
@@ -31,7 +32,7 @@ async function run_simulation() {
   // self.postMessage(groundPlaneMsg);
   
   userConfig.rigidBodies
-    .filter(obj=>{return obj?.collider?.shape})
+    .filter(obj=>{return obj?.collider})
     .forEach(obj=>{
       primitiveCreateAndPost(obj.name, world,
 			     obj.position, obj.orientation,
@@ -74,13 +75,13 @@ async function run_simulation() {
 	if (jnt?.motor) {
 	  const m = jnt.motor;
 	  if (m?.type === 'position') {
-	    console.log("### Configuring position motor:", m);
+	    console.log("## Configuring position motor:", m);
 	    jj1.configureMotorPosition(m.targetPos, m.stiffness, m.damping);
-	    console.log("### Motor configured.");
+	    // console.log("## Motor configured.");
 	  } else if (m?.type === 'velocity') {
-	    console.log("### Configuring velocity motor:", m);
+	    console.log("## Configuring velocity motor:", m);
 	    jj1.configureMotorVelocity(m.targetVel, m.damping);
-	    console.log("### Motor configured.");
+	    // console.log("## Motor configured.");
 	  }
 	}
 	storedJoints[jnt.name] = jj1;
@@ -416,9 +417,9 @@ function createPrimitive(world, position, rotation, colliderDef,
     setColliderProperties(colliderDesc, def?.props);
     const rapierCollider = world.createCollider(colliderDesc, rigidBody);
     // message for AFrame generation
-    const trans = def?.props?.translation ? def.props.translation // [x,y,z]
+    const trans = def?.translation ? def.translation // [x,y,z]
 	  : [0,0,0];
-    const rot = def?.props?.rotation ? def?.props?.rotation // {w:R, x:i, y:j, z:k}
+    const rot = def?.rotation ? def.rotation // {w:R, x:i, y:j, z:k}
 	  : {w:1, x:0, y:0, z:0};
     const oneMsg = {shape: def.shape,
 		    translation: trans, rotation: rot,

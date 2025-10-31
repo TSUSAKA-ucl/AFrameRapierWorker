@@ -2,8 +2,12 @@ import { defineConfig } from "vite";
 import wasm from "vite-plugin-wasm";
 import fs from "fs";
 import path from "path";
+import pkg from './package.json' assert { type: 'json' };
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version)
+  },
   build: {
     lib: {
       entry: "src/rapierWorker.js",

@@ -17,11 +17,14 @@ function defineObject(objDef) {
   const sceneEl = document.querySelector('a-scene');
   if (!sceneEl) return null;
   // let el = null;
-  console.log("Defining object:", objDef.id);
+  // console.log("Defining object:", objDef.id);
   const el = document.createElement('a-entity');
+  // console.log('WWWW objDef:',objDef);
+  // console.log('WWWW objDef.colliders:',objDef.colliders);
   objDef.colliders.forEach((col)=>{
     const elAttrs = {};
     let colEl = null;
+    let logOut = true;
     switch (col.shape) {
     case 'box': {
       colEl = document.createElement('a-box');
@@ -31,7 +34,6 @@ function defineObject(objDef) {
     }
       break;
     case 'cylinder': {
-      // console.log("Creating cylinder with size: ", col.size);
       colEl = document.createElement('a-cylinder');
       elAttrs.height = col.size.height;
       elAttrs.radius = col.size.radius;
@@ -44,7 +46,10 @@ function defineObject(objDef) {
       break;
     default:
       console.warn("Unknown shape:", col.shape);
+      logOut = fales;
     }
+    logOut &&
+      console.log(`AFrame: Create a ${col.shape} collider:`, col.size, 'for',objDef.id);
     if (!colEl) return null;
     elAttrs.color = col.color || 'gray';
     Object.entries(elAttrs).forEach(([k,v])=>colEl.setAttribute(k,v));
@@ -52,11 +57,13 @@ function defineObject(objDef) {
       colEl.setAttribute('material', 'opacity', col.opacity);
       colEl.setAttribute('material', 'transparent', true);
     }
-    colEl.object3D.position.set(...colEl.translation);
-    colEl.object3D.quaternion.set(colEl.rotation.x,
-                                  colEl.rotation.y,
-                                  colEl.rotation.z,
-                                  colEl.rotation.w);
+    colEl.object3D.position.set(...col.translation);
+    colEl.object3D.quaternion.set(col.rotation.x,
+                                  col.rotation.y,
+                                  col.rotation.z,
+                                  col.rotation.w);
+    // console.log('collider object3D pos, quat:', colEl.object3D.position,
+    //             colEl.object3D.quaternion);
     el.appendChild(colEl);
   });
   el.setAttribute('id', objDef.id);
