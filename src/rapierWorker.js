@@ -1,4 +1,8 @@
 import RAPIER from '@dimforge/rapier3d-compat'
+self.RAPIER = RAPIER;
+// self.fix = fix;
+self.fixRigidBodies = fixRigidBodies;
+self.clearFixedRigidBodies = release;
 import {isoMultiply, isoInvert} from './isometry3.js';
 import {getRigidBody, storedBodies,
 	storedJoints, storedFunctions, FunctionState,
@@ -68,8 +72,8 @@ async function run_simulation() {
 					   true);
 	} else {
 	  jj1 = world.createImpulseJoint(jntParams,
-					     getRigidBody(jnt.bodyA),
-					     getRigidBody(jnt.bodyB),
+					 getRigidBody(jnt.bodyA),
+					 getRigidBody(jnt.bodyB),
 					 true);
 	}
 	if (jnt?.motor) {
@@ -476,6 +480,13 @@ function setNextPose(body, position, rotation) {
 function fix(fixName, body1name, body2name) {
   const body1 = storedBodies[body1name];
   const body2 = storedBodies[body2name];
+  const res = fixRigidBodies(fixName, body1, body2);
+  if (!res) {
+    console.warn("fix: body not found:", body1name, body2name,
+		 "or joint already exists:", fixName);
+  }
+}
+function fixRigidBodies(fixName, body1, body2) {
   if (self?.world &&
       body1 && body2 && !storedJoints[fixName]) {
     const pose1 = [body1.translation(), body1.rotation()];
@@ -488,9 +499,7 @@ function fix(fixName, body1name, body2name) {
     storedJoints[fixName] = joint;
     return joint;
   } else {
-    console.warn("fix: body not found:", body1name, body2name,
-		 "or joint already exists:", fixName);
-    console.warm('bodyA:', body1, 'bodyB:',body2,
+    console.warn('bodyA:', body1, 'bodyB:',body2,
 		 'fixJnt(must be undefined):', storedJoints[fixName],
 		 'world:', self?.world);
     return null;
