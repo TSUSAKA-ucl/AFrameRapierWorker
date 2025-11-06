@@ -23,15 +23,6 @@ export default defineConfig({
     },
   },
   plugins: [
-    // viteStaticCopy({
-    //   targets: [
-    // 	   { src: 'a',
-    //       dest: 'b',
-    // 	   },
-    //   ],
-    // });
-    // react(),
-    // wasm(),
     {
       name: "copy-rapierObjectUtils.js-to-dist-worker",
       closeBundle() {
@@ -42,16 +33,6 @@ export default defineConfig({
 	  fs.copyFileSync(path.join('src', file),
 			  path.join(distDir, file));
 	});
-	// ** copy rapier worker to public&dist dir for main thread 
-	// const publicDir = path.resolve(__dirname, "../main/public");
-	// const mainDistDir = path.resolve(__dirname, "../main/dist");
-	// //** Copy all files in `distDir' directory.
-	// fs.readdirSync(distDir).forEach((file) => {
-	//   fs.copyFileSync(path.join(distDir, file),
-	//   		  path.join(publicDir, file));
-	//   fs.copyFileSync(path.join(distDir, file),
-	// 		  path.join(mainDistDir, file));
-	// });
       },
     },
   ],

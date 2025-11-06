@@ -345,14 +345,16 @@ function writePoseToMessage(body, message) {
 }
 
 // ********************************
-function setColliderProperties(collider, props)
+function setColliderProperties(collider, defs)
 {
-  if (props?.translation) {
-    collider.setTranslation(...props.translation);
+  if (defs?.translation) {
+    collider.setTranslation(...defs.translation);
   }
-  if (props?.rotation) {
-    collider.setRotation(props.translation);
+  if (defs?.rotation) {
+    collider.setRotation(defs.translation);
   }
+  const props = defs?.props;
+  if (!props) return;
   if (props?.density) {
     collider.setDensity(props.density);
   }
@@ -418,7 +420,7 @@ function createPrimitive(world, position, rotation, colliderDef,
   
   const oneCollider = (def)=>{
     const colliderDesc = createColliderDesc(def);
-    setColliderProperties(colliderDesc, def?.props);
+    setColliderProperties(colliderDesc, def);
     const rapierCollider = world.createCollider(colliderDesc, rigidBody);
     // message for AFrame generation
     const trans = def?.translation ? def.translation // [x,y,z]
