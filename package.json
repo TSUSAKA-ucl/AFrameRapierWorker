@@ -1,6 +1,6 @@
 {
   "name": "@ucl-nuee/rapier-worker",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "",
   "files": [
     "dist-worker",

@@ -55,6 +55,12 @@ async function run_simulation() {
 	jntParams = RAPIER.JointData.revolute(jnt.anchorA,
 					      jnt.anchorB,
 					      jnt.axis);
+      } else if (jnt?.type === 'fixed') {
+	jntParams = RAPIER.JointData.fixed(jnt.positionA, jnt.orientationA,
+					   jnt.positionB, jnt.orientationB);
+      } else if (jnt?.type === 'spherical') {
+	jntParams = RAPIER.JointData.spherical(jnt.anchorA,
+					      jnt.anchorB);
       }
       if (jntParams) {
 	if (jnt?.limits) {
@@ -86,6 +92,11 @@ async function run_simulation() {
 	    console.log("## Configuring velocity motor:", m);
 	    jj1.configureMotorVelocity(m.targetVel, m.damping);
 	    // console.log("## Motor configured.");
+	  }
+	  if (m?.model === 'acceleration') {
+	    jj1.configureMotorModel(0);
+	  } else if (m?.model === 'force') {
+	    jj1.configureMotorModel(1);
 	  }
 	}
 	storedJoints[jnt.name] = jj1;
