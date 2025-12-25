@@ -1,6 +1,7 @@
 {
   "name": "@ucl-nuee/rapier-worker",
-  "version": "0.2.6",
+  "repository": "https://github.com/TSUSAKA-ucl/AFrameRapierWorker.git",
+  "version": "0.2.7",
   "description": "",
   "files": [
     "dist-worker",
