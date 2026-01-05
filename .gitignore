@@ -1,3 +1,4 @@
 dist-worker/
+public/
 node_modules/
 ucl-nuee-rapier-worker-*.tgz

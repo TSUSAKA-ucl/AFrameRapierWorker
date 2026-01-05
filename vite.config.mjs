@@ -15,7 +15,7 @@ export default defineConfig({
       fileName: "rapier-worker",
       formats: ["es"],
     },
-    outDir: "dist-worker",
+    outDir: "public",
     rollupOptions: {
       external: [
         './rapierObjectUtils.js'
@@ -24,11 +24,11 @@ export default defineConfig({
   },
   plugins: [
     {
-      name: "copy-rapierObjectUtils.js-to-dist-worker",
+      name: "copy-rapierObjectUtils.js-to-public",
       closeBundle() {
 	//** When `compat' version is imported, WASM is embedded
 	//   in JS, so no need to copy it.
-	const distDir = path.resolve(__dirname, "dist-worker");
+	const distDir = path.resolve(__dirname, "public");
 	['rapierObjectUtils.js'].forEach((file)=>{
 	  fs.copyFileSync(path.join('src', file),
 			  path.join(distDir, file));
